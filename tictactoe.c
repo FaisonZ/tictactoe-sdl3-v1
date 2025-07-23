@@ -1,3 +1,4 @@
+#include "SDL3/SDL_events.h"
 #include "SDL3/SDL_init.h"
 #define SDL_MAIN_USE_CALLBACKS 1
 #include <SDL3/SDL.h>
@@ -24,6 +25,7 @@ static SDL_Renderer *renderer = NULL;
 
 static uint32_t current_player = 1;
 static uint8_t placements[9];
+static uint32_t gameState = GAME_IN_PROGRESS;
 
 void clearPlacements()
 {
@@ -122,6 +124,31 @@ int getPlacementAt(float x, float y)
     return -1;
 }
 
+void handlePlacementClick(SDL_MouseButtonEvent *mEvent) {
+    if (mEvent->button != SDL_BUTTON_LEFT) {
+        return;
+    }
+
+    int clickedSquare = getPlacementAt(mEvent->x, mEvent->y);
+    SDL_Log("Left button click at %f, %f", mEvent->x, mEvent->y);
+    SDL_Log("Square clicked: %" SDL_PRIs32, clickedSquare);
+
+    if (clickedSquare != -1 && placements[clickedSquare] == PIECE_NONE) {
+        if (current_player == 1) {
+            placements[clickedSquare] = PIECE_O;
+        } else {
+            placements[clickedSquare] = PIECE_X;
+        }
+
+        gameState = getGameState();
+        if (gameState == GAME_IN_PROGRESS) {
+            current_player = current_player == 1 ? 2 : 1;
+        }
+
+        SDL_Log("Game State: %" SDL_PRIs32, gameState);
+    }
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_SetAppMetadata("Tic Tac Toe Project", "1.0", "net.faisonz.games.tictactoe");
@@ -150,25 +177,12 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
     if (event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
         SDL_MouseButtonEvent *mEvent = (SDL_MouseButtonEvent*) event;
 
-        if (mEvent->button != SDL_BUTTON_LEFT) {
-            return SDL_APP_CONTINUE;
-        }
-
-        int clickedSquare = getPlacementAt(mEvent->x, mEvent->y);
-        SDL_Log("Left button click at %f, %f", mEvent->x, mEvent->y);
-        SDL_Log("Square clicked: %" SDL_PRIs32, clickedSquare);
-
-        if (clickedSquare != -1 && placements[clickedSquare] == PIECE_NONE) {
-            if (current_player == 1) {
-                placements[clickedSquare] = PIECE_O;
-            } else {
-                placements[clickedSquare] = PIECE_X;
-            }
-            current_player = current_player == 1 ? 2 : 1;
-
-            int gameState = getGameState();
-
-            SDL_Log("Game State: %" SDL_PRIs32, gameState);
+        if (gameState == GAME_IN_PROGRESS) {
+            handlePlacementClick(mEvent);
+        } else {
+            clearPlacements();
+            current_player = 1;
+            gameState = GAME_IN_PROGRESS;
         }
     }
 
@@ -186,8 +200,16 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
     SDL_SetRenderScale(renderer, 2.0f, 2.0f);
     SDL_RenderDebugText(renderer, (float) ((WINDOW_WIDTH / 2.0f - (charsize * 11)) / 2), 5, "Tic Tac Toe");
+
     SDL_SetRenderDrawColor(renderer, current_player == 1 ? 200 : 0, current_player == 1 ? 0 : 200, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderDebugTextFormat(renderer, (float) ((WINDOW_WIDTH / 2.0f - (charsize * 8)) / 2), 5 + 1.5f * charsize, "Player %" SDL_PRIu32, current_player );
+    if (gameState == GAME_IN_PROGRESS) {
+        SDL_RenderDebugTextFormat(renderer, (float) ((WINDOW_WIDTH / 2.0f - (charsize * 8)) / 2), 5 + 1.5f * charsize, "Player %" SDL_PRIu32, current_player );
+    } else if (gameState == GAME_END_DRAW) {
+        SDL_RenderDebugTextFormat(renderer, (float) ((WINDOW_WIDTH / 2.0f - (charsize * 4)) / 2), 5 + 1.5f * charsize, "Draw");
+    } else {
+        SDL_RenderDebugTextFormat(renderer, (float) ((WINDOW_WIDTH / 2.0f - (charsize * 14)) / 2), 5 + 1.5f * charsize, "Player %" SDL_PRIu32 " wins!", current_player );
+    }
+
     SDL_SetRenderScale(renderer, 1.0f, 1.0f);
 
     // Render game board
