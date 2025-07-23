@@ -27,6 +27,42 @@ void clearPlacements()
     }
 }
 
+int getPlacementRects(SDL_FRect *rects)
+{
+    float board_left = ((float) (WINDOW_WIDTH - BOARD_WIDTH) / 2.0f) + BOARD_LINE_WIDTH;
+    float board_top = ((float) (WINDOW_HEIGHT - 16.0f - BOARD_WIDTH)) + BOARD_LINE_WIDTH;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            rects[3*i + j].x = (float) board_left + j * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
+            rects[3*i + j].y = (float) board_top + i * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
+            rects[3*i + j].w = (float) SQUARE_WIDTH;
+            rects[3*i + j].h = (float) SQUARE_WIDTH;
+        }
+    }
+
+    return 9;
+}
+
+int getPlacementAt(float x, float y)
+{
+    if (x < 0 || x > WINDOW_WIDTH || y < 0 || y > WINDOW_HEIGHT) {
+        return -1;
+    }
+
+    SDL_FRect squares[9];
+    getPlacementRects(squares);
+
+    for (int i = 0; i < 9; i++) {
+        SDL_FRect square = squares[i];
+        if (x >= square.x && x <= square.x + square.w && y >= square.y && y <= square.y + square.h) {
+            return i;
+        }
+    }
+
+    return -1;
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 {
     SDL_SetAppMetadata("Tic Tac Toe Project", "1.0", "net.faisonz.games.tictactoe");
@@ -50,6 +86,27 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
 {
     if (event->type == SDL_EVENT_QUIT) {
         return SDL_APP_SUCCESS;
+    }
+
+    if (event->type == SDL_EVENT_MOUSE_BUTTON_UP) {
+        SDL_MouseButtonEvent *mEvent = (SDL_MouseButtonEvent*) event;
+
+        if (mEvent->button != SDL_BUTTON_LEFT) {
+            return SDL_APP_CONTINUE;
+        }
+
+        int clickedSquare = getPlacementAt(mEvent->x, mEvent->y);
+        SDL_Log("Left button click at %f, %f", mEvent->x, mEvent->y);
+        SDL_Log("Square clicked: %" SDL_PRIs32, clickedSquare);
+
+        if (clickedSquare != -1 && placements[clickedSquare] == PIECE_NONE) {
+            if (current_player == 1) {
+                placements[clickedSquare] = PIECE_O;
+            } else {
+                placements[clickedSquare] = PIECE_X;
+            }
+            current_player = current_player == 1 ? 2 : 1;
+        }
     }
 
     return SDL_APP_CONTINUE;
@@ -85,19 +142,12 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     float board_top = board_rect.y + BOARD_LINE_WIDTH;
 
     SDL_FRect squares[9];
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            squares[3*i + j].x = (float) board_left + j * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
-            squares[3*i + j].y = (float) board_top + i * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
-            squares[3*i + j].w = (float) SQUARE_WIDTH;
-            squares[3*i + j].h = (float) SQUARE_WIDTH;
-        }
-    }
+    int numSquares = getPlacementRects(squares);
 
     SDL_SetRenderDrawColor(renderer, 200, 200, 200, SDL_ALPHA_OPAQUE);
     SDL_RenderFillRect(renderer, &board_rect);
     SDL_SetRenderDrawColor(renderer, 20, 20, 20, SDL_ALPHA_OPAQUE);
-    SDL_RenderFillRects(renderer, squares, 9);
+    SDL_RenderFillRects(renderer, squares, numSquares);
 
 
     // Draw pieces
