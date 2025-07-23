@@ -4,8 +4,8 @@
 #include <SDL3/SDL_main.h>
 
 #define PIECE_NONE 0
-#define PIECE_X 1
-#define PIECE_O 1<<1
+#define PIECE_O 1
+#define PIECE_X 1<<1
 
 #define WINDOW_WIDTH 640
 #define WINDOW_HEIGHT 480
@@ -13,6 +13,11 @@
 #define BOARD_LINE_WIDTH 10
 #define SQUARE_WIDTH 120
 #define PIECE_WIDTH 100
+
+#define GAME_IN_PROGRESS 0
+#define GAME_END_PLAYER_1 1
+#define GAME_END_PLAYER_2 2
+#define GAME_END_DRAW 4
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
@@ -42,6 +47,60 @@ int getPlacementRects(SDL_FRect *rects)
     }
 
     return 9;
+}
+
+int getGameState()
+{
+    int totalPlacements = 0;
+    // Check horizontals
+    for (int i = 0; i < 3; i++) {
+        int result = placements[3*i] & placements[3*i+1] & placements[3*i+2];
+        SDL_Log("Result for row %" SDL_PRIu32 ": %" SDL_PRIu32, i, result);
+
+        if (result == PIECE_O) {
+            return GAME_END_PLAYER_1;
+        } else if (result == PIECE_X) {
+            return GAME_END_PLAYER_2;
+        }
+    }
+
+    // Check verticals
+    for (int i = 0; i < 3; i++) {
+        int result = placements[i] & placements[i + 3] & placements[i + 6];
+        SDL_Log("Result for col %" SDL_PRIu32 ": %" SDL_PRIu32, i, result);
+
+        if (result == PIECE_O) {
+            return GAME_END_PLAYER_1;
+        } else if (result == PIECE_X) {
+            return GAME_END_PLAYER_2;
+        }
+    }
+
+    // Check diagnols
+    int backDiag = placements[0] & placements[4] & placements[8];
+    int forwardDiag = placements[2] & placements[4] & placements[6];
+    if (backDiag == PIECE_O) {
+        return GAME_END_PLAYER_1;
+    } else if (backDiag == PIECE_X) {
+        return GAME_END_PLAYER_2;
+    }
+    if (forwardDiag == PIECE_O) {
+        return GAME_END_PLAYER_1;
+    } else if (forwardDiag == PIECE_X) {
+        return GAME_END_PLAYER_2;
+    }
+
+    // Check draw
+    for(int i = 0; i < 9; i++) {
+        if (placements[i] != PIECE_NONE) {
+            totalPlacements += 1;
+        }
+    }
+    if (totalPlacements == 9) {
+        return GAME_END_DRAW;
+    }
+
+    return GAME_IN_PROGRESS;
 }
 
 int getPlacementAt(float x, float y)
@@ -106,6 +165,10 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event)
                 placements[clickedSquare] = PIECE_X;
             }
             current_player = current_player == 1 ? 2 : 1;
+
+            int gameState = getGameState();
+
+            SDL_Log("Game State: %" SDL_PRIs32, gameState);
         }
     }
 
