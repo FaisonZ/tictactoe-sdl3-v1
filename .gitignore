@@ -1,0 +1,12 @@
+build
+.cache
+
+CMakeFiles
+*.cmake
+CMakeCache.txt
+Makefile
+compile_commands.json
+include-revision
+include-config-relwithdebinfo
+sdl3.pc
+
