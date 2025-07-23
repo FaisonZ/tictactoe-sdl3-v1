@@ -1,5 +1,9 @@
 # Tic Tac Toe Project
 
+## Status
+
+**COMPLETED!**
+
 ## Dev setup
 
 You need to generate files for the LSP to know about SDL:
