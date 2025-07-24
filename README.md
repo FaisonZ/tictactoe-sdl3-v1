@@ -9,12 +9,11 @@
 You need to generate files for the LSP to know about SDL:
 
 ```bash
-cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 vendored/SDL
+cmake -GNinja -DCMAKE_BUILD_TYPE=Release -B build/release
 ```
 
 ## Build
 
 ```bash
-cmake -S . -B build
-cmake --build build
+cmake --build build/release
 ```
