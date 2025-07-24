@@ -24,6 +24,7 @@ static SDL_Renderer *renderer = NULL;
 static uint32_t current_player = 1;
 static uint8_t placements[9];
 static uint32_t gameState = GAME_IN_PROGRESS;
+static SDL_FRect board[10];
 
 void clearPlacements()
 {
@@ -32,7 +33,7 @@ void clearPlacements()
     }
 }
 
-int getPlacementRects(SDL_FRect *rects)
+int createPlacementRects(SDL_FRect *rects)
 {
     float board_left = ((float) (WINDOW_WIDTH - BOARD_WIDTH) / 2.0f) + BOARD_LINE_WIDTH;
     float board_top = ((float) (WINDOW_HEIGHT - 16.0f - BOARD_WIDTH)) + BOARD_LINE_WIDTH;
@@ -47,6 +48,26 @@ int getPlacementRects(SDL_FRect *rects)
     }
 
     return 9;
+}
+
+void createBoard(SDL_FRect *rects)
+{
+    rects[0].x = (float) (WINDOW_WIDTH - BOARD_WIDTH) / 2;
+    rects[0].y = (float) WINDOW_HEIGHT - 16.0f - BOARD_WIDTH;
+    rects[0].w = (float) BOARD_WIDTH;
+    rects[0].h = (float) BOARD_WIDTH;
+
+    float board_left = ((float) (WINDOW_WIDTH - BOARD_WIDTH) / 2.0f) + BOARD_LINE_WIDTH;
+    float board_top = ((float) (WINDOW_HEIGHT - 16.0f - BOARD_WIDTH)) + BOARD_LINE_WIDTH;
+
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            rects[1 + 3*i + j].x = (float) board_left + j * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
+            rects[1 + 3*i + j].y = (float) board_top + i * (SQUARE_WIDTH + BOARD_LINE_WIDTH);
+            rects[1 + 3*i + j].w = (float) SQUARE_WIDTH;
+            rects[1 + 3*i + j].h = (float) SQUARE_WIDTH;
+        }
+    }
 }
 
 int getGameState()
@@ -109,13 +130,10 @@ int getPlacementAt(float x, float y)
         return -1;
     }
 
-    SDL_FRect squares[9];
-    getPlacementRects(squares);
-
-    for (int i = 0; i < 9; i++) {
-        SDL_FRect square = squares[i];
+    for (int i = 1; i < 10; i++) {
+        SDL_FRect square = board[i];
         if (x >= square.x && x <= square.x + square.w && y >= square.y && y <= square.y + square.h) {
-            return i;
+            return i - 1;
         }
     }
 
@@ -161,6 +179,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_APP_FAILURE;
     }
 
+    createBoard(board);
     clearPlacements();
 
     return SDL_APP_CONTINUE;
@@ -214,23 +233,13 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     // First a big square
     // Then squares to carve out the spots
     // screen: 500 ; board: 300; board placement: 100 - 400; x = (500 - 300)/2
-    SDL_FRect board_rect = {
-        .x = (float) (WINDOW_WIDTH - BOARD_WIDTH) / 2,
-        .y = (float) WINDOW_HEIGHT - 16.0f - BOARD_WIDTH,
-        .w = (float) BOARD_WIDTH,
-        .h = (float) BOARD_WIDTH,
-    };
-
-    float board_left = board_rect.x + BOARD_LINE_WIDTH;
-    float board_top = board_rect.y + BOARD_LINE_WIDTH;
-
-    SDL_FRect squares[9];
-    int numSquares = getPlacementRects(squares);
+    float board_left = board[0].x + BOARD_LINE_WIDTH;
+    float board_top = board[0].y + BOARD_LINE_WIDTH;
 
     SDL_SetRenderDrawColor(renderer, 200, 200, 200, SDL_ALPHA_OPAQUE);
-    SDL_RenderFillRect(renderer, &board_rect);
+    SDL_RenderFillRect(renderer, &board[0]);
     SDL_SetRenderDrawColor(renderer, 20, 20, 20, SDL_ALPHA_OPAQUE);
-    SDL_RenderFillRects(renderer, squares, numSquares);
+    SDL_RenderFillRects(renderer, board + 1, 9);
 
 
     // Draw pieces
